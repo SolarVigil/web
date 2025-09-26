@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solstice Vigilante | Command Terminal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* Definierte Farben und Font-Familien */
+        :root {
+            --color-bg-dark: #0A0A10; /* Tiefes Schwarz/Anthrazit */
+            --color-accent-blue: #00CCFF; /* Neon-Cyan für UI-Akzente */
+            --color-text-mono: #00FF99; /* Neon-Grün für Terminal-Text */
+            --color-frame-dark: #1A1A22; /* Rahmenfarbe */
+            --font-terminal: 'Share Tech Mono', monospace; /* Monospace für Code/Daten */
+            --font-display: 'Orbitron', sans-serif; /* Futuristische Schrift */
+        }
+
+        body {
+            font-family: var(--font-terminal);
+            background-color: var(--color-bg-dark);
+            color: var(--color-text-mono);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden; /* Verhindert unnötiges Scrollen */
+        }
+
+        /* Haupt-Terminal-Rahmen */
+        .terminal-frame {
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            min-height: 600px;
+            background-color: rgba(10, 10, 16, 0.9);
+            border: 4px solid var(--color-accent-blue);
+            box-shadow: 0 0 25px var(--color-accent-blue), inset 0 0 10px rgba(0, 204, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Scanline-Effekt (Subtil) */
+        .terminal-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                #00000000 0,
+                #00000000 1px,
+                rgba(0, 0, 0, 0.2) 2px,
+                rgba(0, 0, 0, 0.2) 3px
+            );
+            pointer-events: none;
+            opacity: 0.1;
+        }
+
+        /* Navigationsbutton-Stil */
+        .nav-link {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            color: #E0E0E0;
+            font-family: var(--font-display);
+        }
+
+        .nav-link.active, .nav-link:hover {
+            border-left: 4px solid var(--color-accent-blue);
+            background-color: rgba(0, 204, 255, 0.1);
+            color: var(--color-accent-blue);
+            text-shadow: 0 0 8px rgba(0, 204, 255, 0.5);
+        }
+
+        /* Content Panel */
+        .data-viewer {
+            background-color: #050508;
+            padding: 30px;
+            overflow-y: auto;
+            color: #E0E0E0;
+        }
+
+        .data-viewer h2, .data-viewer h3 {
+            font-family: var(--font-display);
+            color: var(--color-accent-blue);
+            text-shadow: 0 0 5px rgba(0, 204, 255, 0.4);
+            margin-bottom: 1rem;
+        }
+
+        /* Utility Class für Terminal-Daten */
+        .data-line {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        /* Glitch Effekt für den Header (nur einmalig, dezent) */
+        .glitch-text {
+            color: #fff;
+            position: relative;
+            animation: text-shadow-anim 1s infinite;
+            font-family: var(--font-display);
+        }
+        
+        @keyframes text-shadow-anim {
+            0%, 100% { text-shadow: 0.04em 0 0 #00CCFF, -0.04em 0 0 #FF6600; }
+            50% { text-shadow: -0.04em 0 0 #00CCFF, 0.04em 0 0 #FF6600; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="terminal-frame">
+    <!-- 1. LINKER PANEL: SYSTEM NAVIGATION (Fest) -->
+    <div class="w-1/4 bg-[#14141A] p-6 border-r-2 border-r-gray-800 flex flex-col justify-between">
+        <div>
+            <!-- Header/Logo -->
+            <div class="mb-8 border-b border-gray-700 pb-4">
+                <h1 class="text-3xl font-extrabold glitch-text">
+                    VIGILANTE OS
+                </h1>
+                <p class="text-xs text-gray-500 mt-1">[ACCESS LEVEL: COMMANDER]</p>
+            </div>
+            
+            <!-- Navigationslinks -->
+            <div id="nav-menu" class="space-y-2">
+                <div data-target="status" class="nav-link active p-3 rounded-md uppercase tracking-wider text-lg">
+                    [1] SYSTEM STATUS
+                </div>
+                <div data-target="data-logs" class="nav-link p-3 rounded-md uppercase tracking-wider text-lg">
+                    [2] TACTICAL DATA
+                </div>
+                <div data-target="personnel-file" class="nav-link p-3 rounded-md uppercase tracking-wider text-lg">
+                    [3] PERSONNEL FILE
+                </div>
+                <div data-target="alliance-protocol" class="nav-link p-3 rounded-md uppercase tracking-wider text-lg">
+                    [4] ALLIANCE PROTOCOL
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="text-xs text-gray-600">
+            <p>STATUS: OPERATIONAL</p>
+            <p>CMD TIME: <span id="clock">00:00:00</span> ZULU</p>
+            <p>SYNC: <span class="text-green-500">COMPLETE</span></p>
+        </div>
+    </div>
+
+    <!-- 2. RECHTER PANEL: DATEN-ANZEIGE (Dynamisch) -->
+    <div class="w-3/4 data-viewer">
+        
+        <!-- CONTENT CONTAINER -->
+        <div id="content-container">
+            
+            <!-- 1. SYSTEM STATUS (Default View) -->
+            <div id="status" class="content-panel">
+                <h2 class="text-3xl mb-6 title-display">:: SYSTEM STATUS REPORT</h2>
+                
+                <div class="bg-black p-6 rounded-lg border border-gray-800">
+                    <p class="data-line text-gray-500">// INITIALIZING PROTOCOL...</p>
+                    <p class="data-line mt-4 text-white font-bold">>>> ACCESS GRANTED: SOLSTICE VIGILANTE</p>
+                    <p class="data-line text-gray-400">COMMANDER ROLE: STRATEGIC ANALYST</p>
+                    <p class="data-line text-gray-400">PRIMARY SECTOR: COMPETITIVE GAMING</p>
+                    <p class="data-line mt-4">CORE OBJECTIVE:</p>
+                    <p class="data-line text-yellow-500 pl-4">- MAXIMIZE OPERATIONAL EFFICIENCY (META-GAME)</p>
+                    <p class="data-line text-yellow-500 pl-4">- DECODE ADVANCED GAME MECHANICS</p>
+                    <p class="data-line text-yellow-500 pl-4">- ESTABLISH RELIABLE ALLIANCE NETWORK</p>
+                    <p class="data-line mt-6 text-green-500">SYSTEM READINESS: 100%</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+                    <!-- Status Widget 1 -->
+                    <div class="bg-black p-5 rounded-lg border border-gray-800 shadow-lg">
+                        <h3 class="text-xl text-yellow-500 mb-2">MISSION TRACKER</h3>
+                        <div class="w-full bg-gray-700 rounded-full h-3 mb-2">
+                            <div class="bg-yellow-500 h-3 rounded-full" style="width: 75%"></div>
+                        </div>
+                        <p class="text-sm text-gray-400">AKTIVE ANALYSEN: 3</p>
+                        <p class="text-sm text-gray-400">ERFOLGSQUOTE: 92%</p>
+                    </div>
+                    <!-- Status Widget 2 -->
+                    <div class="bg-black p-5 rounded-lg border border-gray-800 shadow-lg">
+                        <h3 class="text-xl text-cyan-500 mb-2">NETWORK LATENCY</h3>
+                        <p class="text-sm">PING: <span class="text-green-500">35 ms</span> (OPTIMAL)</p>
+                        <p class="text-sm">DATA TRANSFER: <span class="text-cyan-500">5.8 GB/s</span></p>
+                        <p class="text-sm text-gray-400">LAST CONNECTION: 14:30 ZULU</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. TACTICAL DATA (Analysen) -->
+            <div id="data-logs" class="content-panel hidden">
+                <h2 class="text-3xl mb-6 title-display">:: TACTICAL DATA LOGS (MISSION ARCHIVE)</h2>
+                
+                <div class="space-y-4">
+                    <!-- Log Entry 1 -->
+                    <div class="bg-black p-4 rounded-lg border border-gray-800 hover:border-cyan-500 transition duration-300">
+                        <p class="text-xl font-bold text-white neon-text-light">[REPORT 03/25] META-EVOLUTION & DOMINANT BUILDS</p>
+                        <p class="text-sm text-gray-500">STATUS: COMPLETE | DATE: 2025-09-23 | CATEGORY: STRATEGY</p>
+                        <p class="text-sm text-gray-400 mt-1 data-line">>> Untersuchung der Loadout-Shift-Korrelation mit Patch 1.2. Ergebnis: $Dreadnought$-Builds zeigen $15.4\%$ erhöhte Win-Rate.</p>
+                    </div>
+                    <!-- Log Entry 2 -->
+                    <div class="bg-black p-4 rounded-lg border border-gray-800 hover:border-cyan-500 transition duration-300">
+                        <p class="text-xl font-bold text-white neon-text-light">[REPORT 02/25] EFFICIENCY STUDY: STEALTH HUNTER</p>
+                        <p class="text-sm text-gray-500">STATUS: COMPLETE | DATE: 2025-09-16 | CATEGORY: OPTIMIZATION</p>
+                        <p class="text-sm text-gray-400 mt-1 data-line">>> Detaillierte Analyse der Tarn-Mechaniken. Identifizierung des optimalen Zeitfensters für $Cloaking$-Manöver. Implementierung empfohlen.</p>
+                    </div>
+                    <!-- Log Entry 3 -->
+                    <div class="bg-black p-4 rounded-lg border border-gray-800 hover:border-cyan-500 transition duration-300">
+                        <p class="text-xl font-bold text-white neon-text-light">[REPORT 01/25] PLANET SHADOW: LORE DECODING</p>
+                        <p class="text-sm text-gray-500">STATUS: COMPLETE | DATE: 2025-09-08 | CATEGORY: BACKGROUND</p>
+                        <p class="text-sm text-gray-400 mt-1 data-line">>> Entschlüsselung der alten Terminal-Logs bezüglich der Ursprünge des Schattenplaneten. Hinweise auf eine verlorene Fraktion gefunden.</p>
+                    </div>
+                </div>
+
+                <button class="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg mt-8 border border-gray-700 transition duration-300">
+                    <span class="text-cyan-400 data-line">COMMAND: SEARCH_ALL_LOGS</span>
+                </button>
+            </div>
+
+            <!-- 3. PERSONNEL FILE (Profil) -->
+            <div id="personnel-file" class="content-panel hidden">
+                <h2 class="text-3xl mb-6 title-display">:: PERSONNEL FILE (COMMANDER VIGILANTE)</h2>
+                
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="md:col-span-1">
+                        <img src="1758876356358.jpg" alt="Raumschiff/Commander Profilbild" class="rounded-lg border-2 border-cyan-500 shadow-xl" />
+                        <p class="mt-4 text-center text-xs text-gray-500 data-line">IMAGE LOG: INTERSTELLAR VESSEL S.V. PROTOTYPE</p>
+                    </div>
+                    <div class="md:col-span-2 bg-black p-6 rounded-lg border border-gray-800">
+                        <p class="text-lg font-bold text-cyan-500 data-line">CODEX NAME: SOLSTICE VIGILANTE</p>
+                        <p class="text-md text-gray-400 data-line mb-4">DESIGNATION: PRIMARY ANALYST (COMBAT & STRATEGY)</p>
+                        
+                        <h3 class="text-xl mt-6 text-white">:: MISSION STATEMENT</h3>
+                        <p class="text-sm data-line text-gray-300">
+                            "Meine Mission ist es, Komplexität in Klarheit zu verwandeln. Ich nutze eine datenbasierte Methodik, um kompetitive Spiele bis ins Detail zu zerlegen. Egal, ob es um die optimale $DPS$-Kalkulation oder um die perfekte $Flanking$-Strategie geht – mein Fokus liegt auf **Maximum Performance** ohne Spekulation. Mein Content ist für Spieler, die den Unterschied zwischen Gewinnen und Dominieren verstehen."
+                        </p>
+
+                        <h3 class="text-xl mt-6 text-white">:: ACHIEVEMENTS (EXTRACT)</h3>
+                        <p class="text-sm text-green-500 data-line">- Top 0.5% Global Ranking (FPS Title)</p>
+                        <p class="text-sm text-green-500 data-line">- Successfully Decoded 'The Void Protocol'</p>
+                        <p class="text-sm text-green-500 data-line">- Lead Analyst for Project S-7</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. ALLIANCE PROTOCOL (Kooperationen) -->
+            <div id="alliance-protocol" class="content-panel hidden">
+                <h2 class="text-3xl mb-6 title-display">:: ALLIANCE PROTOCOL (AUTHORIZED PARTNERS)</h2>
+                <p class="text-gray-400 text-lg mb-10 data-line">
+                    Das Vigilante-Protokoll kooperiert nur mit Allianzen, die technologische Überlegenheit und kompromisslose Qualität gewährleisten.
+                </p>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-10 items-center justify-center bg-black p-8 rounded-lg border border-gray-800">
+                    <!-- Simulierter Partner 1 -->
+                    <div class="p-4 rounded-lg text-center partner-logo cursor-pointer">
+                        <img src="https://placehold.co/150x50/111827/ffffff?text=Hardware+Expert" alt="Partner Logo Hardware Expert" class="mx-auto h-10 opacity-80" onerror="this.onerror=null;this.src='https://placehold.co/150x50/111827/ffffff?text=Hardware+Expert';">
+                    </div>
+                    <!-- Simulierter Partner 2 -->
+                    <div class="p-4 rounded-lg text-center partner-logo cursor-pointer">
+                        <img src="https://placehold.co/150x50/111827/ffffff?text=Software+Analytics" alt="Partner Logo Software Analytics" class="mx-auto h-10 opacity-80" onerror="this.onerror=null;this.src='https://placehold.co/150x50/111827/ffffff?text=Software+Analytics';">
+                    </div>
+                    <!-- Simulierter Partner 3 -->
+                    <div class="p-4 rounded-lg text-center partner-logo cursor-pointer">
+                        <img src="https://placehold.co/150x50/111827/ffffff?text=Esports+Consulting" alt="Partner Logo Esports Consulting" class="mx-auto h-10 opacity-80" onerror="this.onerror=null;this.src='https://placehold.co/150x50/111827/ffffff?text=Esports+Consulting';">
+                    </div>
+                    <!-- Simulierter Partner 4 -->
+                    <div class="p-4 rounded-lg text-center partner-logo cursor-pointer">
+                        <img src="https://placehold.co/150x50/111827/ffffff?text=Premium+Accessory" alt="Partner Logo Premium Accessory" class="mx-auto h-10 opacity-80" onerror="this.onerror=null;this.src='https://placehold.co/150x50/111827/ffffff?text=Premium+Accessory';">
+                    </div>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="text-xl text-yellow-500 mb-4 title-display">:: CONTACT PROTOCOL</h3>
+                    <p class="data-line text-gray-300">Für Kooperationsanfragen nutzen Sie bitte das verschlüsselte Protokoll:</p>
+                    <p class="data-line text-cyan-500 font-bold mt-2">ENCRYPTED_COMMS@SOLSTICE-VIGILANTE.NET</p>
+                </div>
+            </div>
+            
+        </div>
+        <!-- END CONTENT CONTAINER -->
+    </div>
+</div>
+
+<script>
+    // Javascript für die Terminal-Funktionalität
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const navLinks = document.querySelectorAll('#nav-menu .nav-link');
+        const contentPanels = document.querySelectorAll('.content-panel');
+        const clockElement = document.getElementById('clock');
+
+        // Funktion zur Aktualisierung der Uhrzeit (für den Terminal-Effekt)
+        function updateClock() {
+            const now = new Date();
+            // Formatierung in HH:MM:SS
+            const hours = String(now.getUTCHours()).padStart(2, '0');
+            const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+            clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Starte die Uhr und aktualisiere sie jede Sekunde
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // Navigationslogik
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const targetId = link.getAttribute('data-target');
+
+                // 1. Alle Panels ausblenden
+                contentPanels.forEach(panel => {
+                    panel.classList.add('hidden');
+                });
+
+                // 2. Das Ziel-Panel einblenden
+                const targetPanel = document.getElementById(targetId);
+                if (targetPanel) {
+                    // Optional: Füge eine kurze Verzögerung/Animation für den 'Daten-Lade'-Effekt hinzu
+                    setTimeout(() => {
+                        targetPanel.classList.remove('hidden');
+                    }, 50); 
+                }
+
+                // 3. Aktiven Link hervorheben
+                navLinks.forEach(nav => nav.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // Setze den Initial-Status (wird durch das HTML-Markup bereits abgedeckt, aber hier zur Sicherheit)
+        const initialTarget = document.querySelector('#nav-menu .nav-link.active')?.getAttribute('data-target');
+        if (initialTarget) {
+            document.getElementById(initialTarget).classList.remove('hidden');
+        }
+    });
+</script>
+
+</body>
+</html>
